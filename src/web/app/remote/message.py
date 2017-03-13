@@ -10,12 +10,14 @@ class MessageType(object):
     NULL = 'null'
     CONNECT = 'connect'
     SYNC_APP_GROUP = 'sync_app_group'
+    DOWNLOAD_APP = 'download_app'
 
 
 class ReceiveMessage(object):
     SUPPORT = [
         MessageType.CONNECT,
         MessageType.SYNC_APP_GROUP,
+        MessageType.DOWNLOAD_APP
     ]
 
     @classmethod

@@ -6,9 +6,10 @@
 import json
 
 from .. import logger
-from ..models import LittleCloud
+from ..models import LittleCloud, Application
 from ..common.singleton import Singleton
 from .message import MessageType, ReceiveMessage, ResponseCode, ResponseMessage
+from .. import upload
 
 
 class TaskBroker(object):
@@ -83,7 +84,7 @@ class ConnectTask(BaseTask):
                 little_cloud.is_connected = True
                 little_cloud.save()
         except Exception as e:
-            logger.error('ConnectProcessor error')
+            logger.error('ConnectTask error')
             return ResponseMessage.create(message_type=MessageType.CONNECT, result=ResponseCode.FAIL)
 
         return ResponseMessage.create(message_type=MessageType.CONNECT, result=ResponseCode.SUCCESS)
@@ -126,8 +127,35 @@ class SyncAppGroupTask(BaseTask):
                 }
                 data.append(group_info)
         except Exception as e:
-            logger.error('ConnectProcessor error')
+            logger.error('SyncAppGroupTask error')
             return ResponseMessage.create(message_type=MessageType.SYNC_APP_GROUP, result=ResponseCode.FAIL)
 
         return ResponseMessage.create(message_type=MessageType.SYNC_APP_GROUP, message=data,
+                                      result=ResponseCode.SUCCESS)
+
+
+class DownloadAppTask(BaseTask):
+    @classmethod
+    def process(cls, param, cloud_id):
+        try:
+            little_cloud = LittleCloud.query.get(int(cloud_id))
+            # 检查小云是否已接入
+            if not little_cloud.is_connected:
+                return ResponseMessage.create(message_type=MessageType.DOWNLOAD_APP, result=ResponseCode.FAIL)
+
+            data = []
+            apps_info = param
+            for app in apps_info:
+                name = app["name"]
+                version = app["version"]
+                application = Application.query.filter_by(name=name, version=version).first()
+                if application and application.package:
+                    filename = application.package.filename
+                    data.append({"name": name, "version": version, "url": upload.url(filename), "filename": filename})
+
+        except Exception as e:
+            logger.error('DownloadAppTask error')
+            return ResponseMessage.create(message_type=MessageType.DOWNLOAD_APP, result=ResponseCode.FAIL)
+
+        return ResponseMessage.create(message_type=MessageType.DOWNLOAD_APP, message=data,
                                       result=ResponseCode.SUCCESS)
